@@ -154,15 +154,21 @@ SORT spent - estimate DESC
 
 ## Installation
 
-Not in the community plugin registry yet.
+**With [BRAT](https://github.com/TfTHacker/obsidian42-brat)** — the recommended
+route until this lands in the community registry. BRAT installs plugins straight
+from GitHub and keeps them updated automatically:
 
-**Manually:** download `main.js`, `manifest.json` and `styles.css` from the
-[latest release](https://github.com/kfastov/obsidian-task-timer/releases), drop
-them into `<vault>/.obsidian/plugins/task-timer/`, and enable the plugin under
-Settings → Community plugins.
+1. Install **BRAT** from Settings → Community plugins → Browse, and enable it.
+2. Run the command **BRAT: Add a beta plugin for testing**.
+3. Paste `kfastov/obsidian-task-timer` and confirm.
 
-**With [BRAT](https://github.com/TfTHacker/obsidian42-brat):** add
-`kfastov/obsidian-task-timer` as a beta plugin.
+Task Timer then appears under Installed plugins, and BRAT pulls each new release
+on its own — no manual downloads, no build commands.
+
+**Manually** — download `main.js`, `manifest.json` and `styles.css` from the
+[latest release](https://github.com/kfastov/obsidian-task-timer/releases), put
+them in `<vault>/.obsidian/plugins/task-timer/`, then reload plugins (the refresh
+icon next to "Installed plugins") and enable Task Timer. Updates are on you.
 
 ## Limitations
 

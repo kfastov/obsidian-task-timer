@@ -24,6 +24,9 @@ export interface ActiveTimer {
 
 type Listener = () => void;
 
+/** How many recently modified notes the tid recovery scan looks through. */
+const RECOVERY_SCAN_LIMIT = 200;
+
 /**
  * Rewrites a single task line, preferring the open editor so the cursor and
  * undo history survive, and falling back to a vault write otherwise.
@@ -128,11 +131,16 @@ export class Tracker {
     this.emit();
   }
 
-  /** Scans daily notes for the line carrying this tid. */
+  /**
+   * Recovery path only, used when the stored source path is gone: looks for the
+   * line carrying this tid. Task lines live in recently touched notes, so the
+   * scan runs newest-first and stops well short of walking the whole vault.
+   */
   private async findPathByTid(tid: string): Promise<string | null> {
     const files = this.app.vault
       .getMarkdownFiles()
-      .sort((a, b) => b.stat.mtime - a.stat.mtime);
+      .sort((a, b) => b.stat.mtime - a.stat.mtime)
+      .slice(0, RECOVERY_SCAN_LIMIT);
 
     for (const file of files) {
       const content = await this.app.vault.cachedRead(file);

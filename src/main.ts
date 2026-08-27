@@ -41,7 +41,7 @@ export default class TaskTimerPlugin extends Plugin {
 
     this.statusBar = this.addStatusBarItem();
     this.statusBar.addClass("tt-status");
-    this.statusBar.addEventListener("click", () => void this.tracker.stop());
+    this.registerDomEvent(this.statusBar, "click", () => void this.tracker.stop());
 
     this.register(
       this.tracker.onChange(() => {
@@ -85,7 +85,11 @@ export default class TaskTimerPlugin extends Plugin {
     this.addCommand({
       id: "stop-timer",
       name: "Stop the running timer",
-      callback: () => void this.tracker.stop(),
+      checkCallback: (checking) => {
+        if (!this.tracker.getActive()) return false;
+        if (!checking) void this.tracker.stop();
+        return true;
+      },
     });
 
     this.addCommand({

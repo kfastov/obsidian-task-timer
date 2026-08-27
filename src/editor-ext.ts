@@ -29,10 +29,11 @@ class TimerButton extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    const button = document.createElement("span");
-    button.className = `tt-button${this.running ? " tt-button-running" : ""}`;
-    button.setText(this.running ? "⏸" : "▶");
-    button.setAttribute("aria-label", this.running ? "Pause timer" : "Start timer");
+    const button = createSpan({
+      cls: this.running ? "tt-button tt-button-running" : "tt-button",
+      text: this.running ? "⏸" : "▶",
+      attr: { "aria-label": this.running ? "Pause timer" : "Start timer" },
+    });
 
     button.addEventListener("mousedown", (event) => {
       // Claim the click before CodeMirror moves the cursor into the line.
