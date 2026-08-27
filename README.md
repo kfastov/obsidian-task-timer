@@ -159,7 +159,7 @@ route until this lands in the community registry. BRAT installs plugins straight
 from GitHub and keeps them updated automatically:
 
 1. Install **BRAT** from Settings → Community plugins → Browse, and enable it.
-2. Run the command **BRAT: Add a beta plugin for testing**.
+2. From the command palette, run BRAT's "add a beta plugin" command.
 3. Paste `kfastov/obsidian-task-timer` and confirm.
 
 Task Timer then appears under Installed plugins, and BRAT pulls each new release
