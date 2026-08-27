@@ -133,14 +133,25 @@ summarise itself:
 ```dataview
 TABLE WITHOUT ID
   sum(rows.task.estimate) AS "Planned",
-  sum(filter(rows.task, (t) => t.spent).spent) AS "Spent",
-  sum(filter(rows.task, (t) => !t.completed).estimate) AS "Remaining"
+  sum(rows.spent) AS "Spent",
+  sum(rows.left) AS "Remaining"
 WHERE file.path = this.file.path
 FLATTEN file.tasks AS task
 WHERE task.estimate != null
+FLATTEN choice(task.completed,
+          default(task.spent, task.estimate),
+          default(task.spent, dur("0s"))) AS spent
+FLATTEN choice(task.completed, dur("0s"),
+          choice(spent > task.estimate, dur("0s"), task.estimate - spent)) AS left
 GROUP BY true
 ```
 ````
+
+Two details make this behave the way you would expect. A task checked off
+without ever being tracked has no `spent`, so it falls back to its estimate
+rather than counting as zero. And "Remaining" is the leftover *budget* of
+unfinished tasks — a task with `[estimate:: 1h] [spent:: 45m]` has 15m left, and
+one already over its estimate contributes nothing instead of negative time.
 
 Or find everything that blew its budget across the vault:
 
