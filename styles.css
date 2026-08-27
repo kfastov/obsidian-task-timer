@@ -1,0 +1,45 @@
+/* Timer button sitting at the end of a trackable task line. */
+.tt-button {
+  cursor: pointer;
+  margin-left: 0.5em;
+  padding: 0 0.35em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  line-height: 1.4;
+  color: var(--text-muted);
+  background: var(--background-modifier-hover);
+  user-select: none;
+}
+
+.tt-button:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-border);
+}
+
+.tt-button-running {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+/* Budget state of the line. Translucent so themes keep showing through. */
+.tt-warn {
+  background-color: rgba(224, 168, 0, 0.13);
+}
+
+.tt-over {
+  background-color: rgba(226, 66, 66, 0.15);
+}
+
+.tt-running {
+  box-shadow: inset 2px 0 0 0 var(--interactive-accent);
+}
+
+.tt-status-running {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+/* The tid is bookkeeping, not content — hide the Dataview pill it renders as. */
+.dataview.inline-field:has(> .inline-field-key[data-dv-key="tid"]) {
+  display: none;
+}

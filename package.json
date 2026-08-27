@@ -1,0 +1,35 @@
+{
+  "name": "obsidian-task-timer",
+  "version": "0.1.0",
+  "description": "Obsidian plugin: track time on checkbox tasks that carry an estimate, one timer at a time.",
+  "author": "Konstantin Fastov",
+  "license": "MIT",
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "time-tracking",
+    "tasks",
+    "estimates"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kfastov/obsidian-task-timer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kfastov/obsidian-task-timer/issues"
+  },
+  "homepage": "https://github.com/kfastov/obsidian-task-timer#readme",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "test": "esbuild tests/units.ts --bundle --platform=node --format=cjs --outfile=.test/units.cjs --log-level=error && node .test/units.cjs && esbuild tests/integration.ts --bundle --platform=node --format=cjs --alias:obsidian=./tests/obsidian-stub.ts --outfile=.test/integration.cjs --log-level=error && node .test/integration.cjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.24.2",
+    "obsidian": "^1.7.2",
+    "typescript": "^5.7.2"
+  }
+}

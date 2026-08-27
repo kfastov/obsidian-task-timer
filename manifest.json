@@ -1,0 +1,10 @@
+{
+  "id": "task-timer",
+  "name": "Task Timer",
+  "version": "0.1.0",
+  "minAppVersion": "1.6.0",
+  "description": "Track time on checkbox tasks that carry an estimate. One timer at a time, spent time stored inline, and the line turns yellow then red as it approaches the estimate.",
+  "author": "Konstantin Fastov",
+  "authorUrl": "https://github.com/kfastov",
+  "isDesktopOnly": false
+}
