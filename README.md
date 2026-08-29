@@ -47,6 +47,8 @@ mix tracked work with ordinary checkboxes.
 Accepted duration units: `s`, `m`/`min`, `h`/`hr`, `d`, in any combination —
 `45m`, `2h`, `1h30m`, `1h 30m`.
 
+Both Dataview field syntaxes work: `[estimate:: 1h]` and `(estimate:: 1h)`.
+
 Any list marker works (`-`, `*`, `+`), nesting and indentation are fine.
 
 **Dataview is optional.** The plugin has no dependency on it, but the fields it

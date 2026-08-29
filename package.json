@@ -1,6 +1,6 @@
 {
   "name": "obsidian-task-timer",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Obsidian plugin: track time on checkbox tasks that carry an estimate, one timer at a time.",
   "author": "Konstantin Fastov",
   "license": "MIT",

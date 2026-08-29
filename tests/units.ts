@@ -64,6 +64,16 @@ check("reparse spent", parseTaskLine(spent2)!.spent, 4500);
 check("reparse tid", parseTaskLine(spent2)!.tid, "a1b2c3d4");
 check("title strips fields", parseTaskLine(spent2)!.title, "Draft the quarterly report");
 
+const doubled = parseTaskLine("- [ ] Grab lunch [[estimate:: 10m]] [tid:: c7f880f2]")!;
+check("double-bracketed field still parses", doubled.estimate, 600);
+check("double-bracketed field leaves no debris", doubled.title, "Grab lunch");
+const parens = parseTaskLine("- [ ] Call the notary (estimate:: 5m)")!;
+check("paren-style field parses", parens.estimate, 300);
+check("paren-style field leaves no debris", parens.title, "Call the notary");
+check("paren-style is trackable", isTrackable(parens), true);
+check("plain parentheses survive", parseTaskLine("- [ ] Call (twice) [estimate:: 5m]")!.title, "Call (twice)");
+check("paren field normalised on write", withSpent("- [ ] Call (spent:: 1m) [estimate:: 5m]", 120), "- [ ] Call [spent:: 2m] [estimate:: 5m]");
+
 check("trailing space handled", withSpent("- [ ] X [estimate:: 30m]   ", 60), "- [ ] X [estimate:: 30m] [spent:: 1m]");
 
 const doc = ["# Plan", "- [ ] A [estimate:: 30m]", "- [ ] B [estimate:: 1h] [tid:: beef]"].join("\n");

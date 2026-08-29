@@ -23,8 +23,9 @@ export interface ParsedTask {
   title: string;
 }
 
+/** Dataview accepts both `[key:: value]` and `(key:: value)`; so do we. */
 function inlineFieldPattern(key: string): RegExp {
-  return new RegExp(`\\[${key}::\\s*([^\\]]*)\\]`, "i");
+  return new RegExp(`[[(]${key}::\\s*([^\\])]*)[\\])]`, "i");
 }
 
 function readField(body: string, key: string): string | null {
@@ -42,7 +43,10 @@ export function parseTaskLine(raw: string): ParsedTask | null {
   const spentRaw = readField(body, SPENT_KEY);
 
   const title = body
-    .replace(/\[[a-z0-9_-]+::[^\]]*\]/gi, "")
+    .replace(/[[(][a-z0-9_-]+::[^\])]*[\])]/gi, "")
+    // A field wrapped in extra brackets — `[[estimate:: 10m]]`, easy to typo —
+    // leaves an empty pair behind once the field itself is stripped.
+    .replace(/[[(]\s*[\])]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
