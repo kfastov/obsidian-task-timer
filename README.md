@@ -67,7 +67,12 @@ Two inline fields are added to the task line:
   per day: carry an unfinished task into tomorrow's daily note and it resumes with
   its total intact. With Dataview installed, this field is hidden in reading view.
 * **`spent`** — the running total, in a format Dataview parses as a duration, so
-  it sums alongside `estimate` in queries.
+  it sums alongside `estimate` in queries. It updates while the timer runs —
+  roughly once a minute, whenever the displayed value actually changes — so a
+  Dataview roll-up reflects the day as it happens rather than only after you
+  stop. Those refreshes are written as the smallest possible edit and kept out
+  of the undo stack, so they neither move your cursor nor stand between you and
+  undoing your own typing.
 
 Every session is also appended to a per-day log, one line each:
 
@@ -113,7 +118,10 @@ The status bar shows the active task and its running time.
   The threshold is configurable.
 * **A session crossing midnight** stays in the log file of the day it started.
 * **Crash or restart mid-session** — the running timer is restored on load, from
-  the plugin state or, failing that, from the open session in the log.
+  the plugin state or, failing that, from the open session in the log. The
+  baseline it resumes from is the sum of closed sessions in the log, never the
+  figure sitting in the line, which may already include part of the session
+  still running.
 
 ## Settings
 

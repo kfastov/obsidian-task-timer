@@ -1,5 +1,8 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
+import { Transaction } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 
+import { formatDuration } from "./duration";
 import { SessionStore } from "./store";
 import {
   findLineByTid,
@@ -20,6 +23,12 @@ export interface ActiveTimer {
   sourcePath: string;
   /** Log file the open session was written to. */
   logKey: string;
+  /**
+   * The task's `spent` before this session began. Every write is `baseSpent`
+   * plus the session so far, so refreshing the line while the timer runs can
+   * never compound into double counting.
+   */
+  baseSpent: number;
 }
 
 type Listener = () => void;
@@ -27,9 +36,43 @@ type Listener = () => void;
 /** How many recently modified notes the tid recovery scan looks through. */
 const RECOVERY_SCAN_LIMIT = 200;
 
+/** The span where two strings differ, so an edit touches as little as possible. */
+function diffRange(
+  before: string,
+  after: string,
+): { from: number; to: number; insert: string } | null {
+  if (before === after) return null;
+
+  let start = 0;
+  while (
+    start < before.length &&
+    start < after.length &&
+    before[start] === after[start]
+  ) {
+    start++;
+  }
+
+  let endBefore = before.length;
+  let endAfter = after.length;
+  while (
+    endBefore > start &&
+    endAfter > start &&
+    before[endBefore - 1] === after[endAfter - 1]
+  ) {
+    endBefore--;
+    endAfter--;
+  }
+
+  return { from: start, to: endBefore, insert: after.slice(start, endAfter) };
+}
+
 /**
  * Rewrites a single task line, preferring the open editor so the cursor and
  * undo history survive, and falling back to a vault write otherwise.
+ *
+ * Edits go in through CodeMirror as the smallest possible change, kept out of
+ * the undo stack: the timer refreshes the line every minute, and those writes
+ * are bookkeeping the user should never have to undo their way past.
  */
 async function updateTaskLine(
   app: App,
@@ -48,7 +91,26 @@ async function updateTaskLine(
     const index = findLineByTid(editor.getValue(), tid);
     if (index === -1) break;
 
-    editor.setLine(index, transform(editor.getLine(index)));
+    const before = editor.getLine(index);
+    const after = transform(before);
+    const diff = diffRange(before, after);
+    if (!diff) return true;
+
+    const cm = (editor as unknown as { cm?: EditorView }).cm;
+    if (cm) {
+      const line = cm.state.doc.line(index + 1);
+      cm.dispatch({
+        changes: {
+          from: line.from + diff.from,
+          to: line.from + diff.to,
+          insert: diff.insert,
+        },
+        annotations: Transaction.addToHistory.of(false),
+      });
+    } else {
+      editor.setLine(index, after);
+    }
+
     return true;
   }
 
@@ -68,6 +130,8 @@ async function updateTaskLine(
 
 export class Tracker {
   private active: ActiveTimer | null = null;
+  /** Last `spent` value written to the line, to skip redundant writes. */
+  private lastWritten: string | null = null;
   private readonly listeners = new Set<Listener>();
 
   constructor(
@@ -122,13 +186,27 @@ export class Tracker {
         startedAt: open.start,
         sourcePath: path ?? "",
         logKey: open.dateKey,
+        baseSpent: await this.baseSpentFor(open.tid),
       };
       this.emit();
       return;
     }
 
-    this.active = saved;
+    this.active = {
+      ...saved,
+      // Older saved state predates this field, and a line refreshed mid-session
+      // cannot be trusted to hold the baseline — the closed sessions can.
+      baseSpent:
+        typeof saved.baseSpent === "number"
+          ? saved.baseSpent
+          : await this.baseSpentFor(saved.tid),
+    };
     this.emit();
+  }
+
+  /** The task's committed time: everything already closed out in the log. */
+  private async baseSpentFor(tid: string): Promise<number> {
+    return (await this.store.totalsByTid()).get(tid) ?? 0;
   }
 
   /**
@@ -201,7 +279,9 @@ export class Tracker {
       startedAt,
       sourcePath: file.path,
       logKey,
+      baseSpent: task.spent,
     };
+    this.lastWritten = null;
 
     await this.persist(this.active);
     this.emit();
@@ -214,6 +294,7 @@ export class Tracker {
 
     const seconds = Math.round((Date.now() - active.startedAt) / 1000);
     this.active = null;
+    this.lastWritten = null;
 
     if (seconds < this.settings.minSessionSeconds) {
       await this.store.discardSession(active.tid, active.logKey);
@@ -229,11 +310,12 @@ export class Tracker {
     const path =
       active.sourcePath || (await this.findPathByTid(active.tid)) || "";
 
+    // Deliberately not read back from the line: it may already carry a live
+    // figure written mid-session, and re-adding would double count.
     const written = path
-      ? await updateTaskLine(this.app, path, active.tid, (line) => {
-          const task = parseTaskLine(line);
-          return withSpent(line, (task?.spent ?? 0) + recorded);
-        })
+      ? await updateTaskLine(this.app, path, active.tid, (line) =>
+          withSpent(line, active.baseSpent + recorded),
+        )
       : false;
 
     if (!written) {
@@ -245,6 +327,33 @@ export class Tracker {
 
     await this.persist(null);
     this.emit();
+  }
+
+  /**
+   * Writes the running total into the task line while the timer is going.
+   * Cheap to call often: it only touches the file when the rendered value
+   * actually changes, which works out to about once a minute.
+   */
+  async syncSpent(): Promise<void> {
+    const active = this.active;
+    if (!active) return;
+
+    const elapsed = this.elapsed();
+    // Below the minimum the session would be discarded anyway, so writing a
+    // figure the user might never keep would be a lie on disk.
+    if (elapsed < this.settings.minSessionSeconds) return;
+
+    const total = active.baseSpent + elapsed;
+    const rendered = formatDuration(total);
+    if (rendered === this.lastWritten) return;
+
+    this.lastWritten = rendered;
+    const path = active.sourcePath;
+    if (!path) return;
+
+    await updateTaskLine(this.app, path, active.tid, (line) =>
+      withSpent(line, total),
+    );
   }
 
   /**

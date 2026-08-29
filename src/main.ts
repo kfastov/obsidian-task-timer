@@ -55,6 +55,7 @@ export default class TaskTimerPlugin extends Plugin {
         if (!this.tracker.getActive()) return;
 
         this.renderStatusBar();
+        void this.tracker.syncSpent();
         if (++this.ticks % REPAINT_EVERY_TICKS === 0) this.refreshEditors();
       }, 1000),
     );

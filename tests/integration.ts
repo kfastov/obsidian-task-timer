@@ -31,6 +31,77 @@ const SETTINGS = {
   minSessionSeconds: 60,
 };
 
+/** The line is refreshed while a timer runs, without inflating the total. */
+async function liveUpdates(): Promise<void> {
+  console.log("\n--- live spent updates ---");
+
+  const app = new FakeApp();
+  app.vault.add(
+    DAILY,
+    ["## Plan", "", "- [ ] Draft the quarterly report [estimate:: 1h]", ""].join("\n"),
+  );
+
+  const file = app.vault.getFileByPath(DAILY)! as never;
+  const store = new SessionStore(app as never, SETTINGS.logFolder);
+  const tracker = new Tracker(app as never, store, SETTINGS, async () => {});
+
+  const line = () => app.vault.getFileByPath(DAILY)!.content.split("\n")[2];
+  const spent = () => parseTaskLine(line())?.spent ?? 0;
+
+  await tracker.startAtLine(file, 2);
+  check("nothing written at the start", /spent::/.test(line()), false);
+
+  advance(0.5);
+  await tracker.syncSpent();
+  check("still nothing under the minimum session", /spent::/.test(line()), false);
+
+  advance(9.5);
+  await tracker.syncSpent();
+  check("line shows the running total", formatDuration(spent()), "10m");
+
+  await tracker.syncSpent();
+  check("repeat sync is a no-op", formatDuration(spent()), "10m");
+
+  advance(5);
+  await tracker.syncSpent();
+  check("total keeps climbing", formatDuration(spent()), "15m");
+
+  advance(5);
+  await tracker.stop();
+  check("stop does not double count", formatDuration(spent()), "20m");
+
+  // Resuming must build on the committed total, not restart from it.
+  advance(1);
+  await tracker.startAtLine(file, 2);
+  advance(10);
+  await tracker.syncSpent();
+  check("second session accumulates on top", formatDuration(spent()), "30m");
+  advance(2);
+  await tracker.stop();
+  check("second stop is exact", formatDuration(spent()), "32m");
+
+  // Switching away mid-session banks the exact elapsed time, once.
+  app.vault.getFileByPath(DAILY)!.content += "\n- [ ] Review the backlog [estimate:: 30m]";
+  await tracker.startAtLine(file, 2);
+  advance(6);
+  await tracker.syncSpent();
+  await tracker.startAtLine(file, 4);
+  check("switching banks the exact total", formatDuration(spent()), "38m");
+  await tracker.stop();
+
+  // A restart mid-session recovers the baseline from the log, not the line.
+  await tracker.startAtLine(file, 2);
+  advance(4);
+  await tracker.syncSpent();
+  check("line carries the live figure", formatDuration(spent()), "42m");
+
+  const revived = new Tracker(app as never, store, SETTINGS, async () => {});
+  await revived.restore(null);
+  advance(3);
+  await revived.stop();
+  check("restarted timer does not double count", formatDuration(spent()), "45m");
+}
+
 async function main(): Promise<void> {
   const app = new FakeApp();
   app.vault.add(
@@ -142,6 +213,8 @@ async function main(): Promise<void> {
   await fromLog.restore(null);
   check("recovered open session from log", fromLog.getActive()?.tid, tid2);
   check("found the source file by tid", fromLog.getActive()?.sourcePath, DAILY);
+
+  await liveUpdates();
 
   check("no notices raised", notices, []);
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURES`);
