@@ -1,4 +1,4 @@
-import { MarkdownView, Notice, Plugin } from "obsidian";
+import { MarkdownView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 
 import { buildEditorExtension, refreshEffect } from "./editor-ext";
@@ -6,6 +6,7 @@ import { formatClock } from "./duration";
 import { SessionStore } from "./store";
 import { findLineByTid, isDone, parseTaskLine } from "./task-line";
 import { Tracker, type ActiveTimer } from "./tracker";
+import { ZEN_VIEW_TYPE, ZenView } from "./zen-view";
 import {
   DEFAULT_SETTINGS,
   TaskTimerSettingTab,
@@ -19,6 +20,9 @@ const REPAINT_EVERY_TICKS = 15;
 export default class TaskTimerPlugin extends Plugin {
   settings: TaskTimerSettings = { ...DEFAULT_SETTINGS };
   tracker!: Tracker;
+
+  /** Last markdown note visited, so the zen view has something to open with. */
+  lastMarkdownPath: string | null = null;
 
   private store!: SessionStore;
   private statusBar!: HTMLElement;
@@ -38,6 +42,19 @@ export default class TaskTimerPlugin extends Plugin {
 
     this.registerEditorExtension(buildEditorExtension(this));
     this.addSettingTab(new TaskTimerSettingTab(this.app, this));
+
+    this.registerView(
+      ZEN_VIEW_TYPE,
+      (leaf: WorkspaceLeaf) => new ZenView(leaf, this),
+    );
+    this.addRibbonIcon("timer", "Open task timer", () => void this.openZenView());
+
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view?.file) this.lastMarkdownPath = view.file.path;
+      }),
+    );
 
     this.statusBar = this.addStatusBarItem();
     this.statusBar.addClass("tt-status");
@@ -94,6 +111,12 @@ export default class TaskTimerPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "open-zen-view",
+      name: "Open zen view",
+      callback: () => void this.openZenView(),
+    });
+
+    this.addCommand({
       id: "recompute-spent",
       name: "Recalculate spent from the log",
       callback: () => void this.recompute(),
@@ -113,6 +136,21 @@ export default class TaskTimerPlugin extends Plugin {
   onunload(): void {
     // The timer keeps running across restarts by design: wall-clock time counts
     // even while Obsidian is closed, so offline work is not lost.
+  }
+
+  /** Focuses the zen view, opening it in a new tab when it is not around. */
+  async openZenView(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(ZEN_VIEW_TYPE);
+
+    if (existing.length > 0) {
+      await workspace.revealLeaf(existing[0]);
+      return;
+    }
+
+    const leaf = workspace.getLeaf("tab");
+    await leaf.setViewState({ type: ZEN_VIEW_TYPE, active: true });
+    await workspace.revealLeaf(leaf);
   }
 
   async persist(active: ActiveTimer | null): Promise<void> {

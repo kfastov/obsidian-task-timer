@@ -1,6 +1,8 @@
 body {
   --tt-warn-bg: rgba(224, 168, 0, 0.13);
   --tt-over-bg: rgba(226, 66, 66, 0.15);
+  --tt-under-bg: rgba(120, 110, 190, 0.11);
+  --tt-done-bg: rgba(130, 125, 145, 0.10);
 }
 
 /* Timer button sitting at the end of a trackable task line. */
@@ -47,4 +49,180 @@ body {
 /* The tid is bookkeeping, not content — hide the Dataview pill it renders as. */
 .dataview.inline-field:has(> .inline-field-key[data-dv-key="tid"]) {
   display: none;
+}
+
+/* ---- zen view ---------------------------------------------------------- */
+
+.tt-zen {
+  --tt-warn-text: #8f6100;
+  --tt-over-text: #b8342f;
+  overflow-y: auto;
+}
+
+.theme-dark .tt-zen {
+  --tt-warn-text: #dcab55;
+  --tt-over-text: #ef6f6a;
+}
+
+.tt-zen-shell {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+
+.tt-zen-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tt-zen-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tt-zen-total {
+  font-family: var(--font-monospace);
+  font-size: 2.8em;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: color 240ms ease;
+}
+
+.tt-zen-total.is-running {
+  color: var(--text-accent);
+}
+
+.tt-zen-meta,
+.tt-zen-source {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-zen-source {
+  color: var(--text-faint);
+}
+
+.tt-zen-control {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.tt-zen-control:hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-accent);
+}
+
+.tt-zen-control.is-running {
+  border-color: transparent;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.tt-zen-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tt-zen-task {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  cursor: pointer;
+  isolation: isolate;
+  transition: background-color 160ms ease;
+}
+
+/* The fill is its own layer so hover can sit on top of it. */
+.tt-zen-task::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: var(--tt-pct, 0%);
+  background: var(--tt-under-bg);
+  transition: width 900ms linear, background-color 240ms ease;
+}
+
+.tt-zen-task.is-warn::before { background: var(--tt-warn-bg); }
+.tt-zen-task.is-over::before { background: var(--tt-over-bg); }
+.tt-zen-task.is-done::before { background: var(--tt-done-bg); }
+
+.tt-zen-task:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.tt-zen-task.is-active {
+  outline: 1px solid var(--interactive-accent);
+  outline-offset: -1px;
+}
+
+.tt-zen-task:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.tt-zen-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tt-zen-task.is-done .tt-zen-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.tt-zen-time {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tt-zen-task.is-warn .tt-zen-time { color: var(--tt-warn-text); }
+.tt-zen-task.is-over .tt-zen-time { color: var(--tt-over-text); }
+
+.tt-zen-empty {
+  padding: 28px 14px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .tt-zen-task { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-zen-total,
+  .tt-zen-control,
+  .tt-zen-task,
+  .tt-zen-task::before {
+    transition-duration: 1ms;
+  }
 }

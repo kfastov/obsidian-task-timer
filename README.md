@@ -89,6 +89,18 @@ repair surface: it is plain markdown, so a bad entry is fixed by editing the lin
 and running **Recalculate spent from the log**, which rewrites every `spent`
 field from the logged sessions.
 
+## Zen view
+
+A focused read-out of one note's tracked tasks, opened from the ribbon (the
+timer icon) or the command **Open zen view**. Each row is its own progress bar,
+filled to `spent / estimate` in the colour of its budget state; the running task
+is outlined; the day's total sits on top and ticks along with it, next to a
+single start/pause control.
+
+Click a row to switch to that task — same single-timer rule as everywhere else.
+The view follows the last markdown note you visited, so opening your daily note
+puts your day in front of you, and it stays live as sessions are recorded.
+
 ## Colour coding
 
 The task line is tinted by `spent / estimate` — yellow from 80%, red from 100%,
@@ -194,7 +206,7 @@ icon next to "Installed plugins") and enable Task Timer. Updates are on you.
 ## Limitations
 
 * Buttons and colouring live in the editor (Live Preview and source mode).
-  Reading view is not covered yet.
+  Reading view is not covered yet — the zen view is the read-only surface.
 * Not tested on mobile, though nothing in it is desktop-only.
 * One timer, by design. There is no way to run two tasks at once.
 
