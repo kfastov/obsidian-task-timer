@@ -102,7 +102,7 @@ export function buildEditorExtension(plugin: TaskTimerPlugin) {
 
             if (task && isTrackable(task) && task.estimate) {
               const running = plugin.tracker.isActive(task.tid);
-              const spent = task.spent + plugin.tracker.liveExtra(task.tid);
+              const spent = plugin.tracker.displaySpent(task.tid, task.spent);
               const percent = (spent / task.estimate) * 100;
 
               const classes = ["tt-task"];

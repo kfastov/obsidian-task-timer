@@ -164,9 +164,19 @@ export class Tracker {
     return Math.max(0, Math.round((Date.now() - this.active.startedAt) / 1000));
   }
 
-  /** Seconds to add on top of the line's recorded `spent` for a given task. */
-  liveExtra(tid: string | null): number {
-    return this.isActive(tid) ? this.elapsed() : 0;
+  /**
+   * What a task's `spent` should read as right now, given the value parsed
+   * from its line.
+   *
+   * For the running task the line is not a reliable base: it is refreshed
+   * mid-session and so may already include part of the current session.
+   * Adding elapsed on top of it would count that stretch twice, so the total
+   * is rebuilt from the baseline captured at start instead.
+   */
+  displaySpent(tid: string | null, lineSpent: number): number {
+    const active = this.active;
+    if (!active || active.tid !== tid) return lineSpent;
+    return active.baseSpent + this.elapsed();
   }
 
   /**

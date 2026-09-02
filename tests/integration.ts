@@ -66,9 +66,28 @@ async function liveUpdates(): Promise<void> {
   await tracker.syncSpent();
   check("total keeps climbing", formatDuration(spent()), "15m");
 
+  // What the editor and the zen view show must track the file, not double it.
+  check(
+    "display matches the line, not twice it",
+    formatDuration(tracker.displaySpent(parseTaskLine(line())!.tid, spent())),
+    "15m",
+  );
+
   advance(5);
+  check(
+    "display keeps up between writes",
+    formatDuration(tracker.displaySpent(parseTaskLine(line())!.tid, spent())),
+    "20m",
+  );
+  check("the line itself lags until the next sync", formatDuration(spent()), "15m");
+
   await tracker.stop();
   check("stop does not double count", formatDuration(spent()), "20m");
+  check(
+    "display falls back to the line once stopped",
+    formatDuration(tracker.displaySpent(parseTaskLine(line())!.tid, spent())),
+    "20m",
+  );
 
   // Resuming must build on the committed total, not restart from it.
   advance(1);

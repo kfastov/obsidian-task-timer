@@ -177,7 +177,7 @@ export class ZenView extends ItemView {
     let touched = 0;
 
     for (const { el, time, task } of this.rows) {
-      const spent = task.spent + this.plugin.tracker.liveExtra(task.tid);
+      const spent = this.plugin.tracker.displaySpent(task.tid, task.spent);
       const percent = (spent / task.estimate) * 100;
       const running = this.plugin.tracker.isActive(task.tid);
 
