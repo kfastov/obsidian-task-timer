@@ -92,14 +92,35 @@ field from the logged sessions.
 ## Zen view
 
 A focused read-out of one note's tracked tasks, opened from the ribbon (the
-timer icon) or the command **Open zen view**. Each row is its own progress bar,
-filled to `spent / estimate` in the colour of its budget state; the running task
-is outlined; the day's total sits on top and ticks along with it, next to a
-single start/pause control.
+timer icon) or the command **Open zen view**. It follows the last markdown note
+you visited, so opening your daily note puts your day in front of you.
 
-Click a row to switch to that task — same single-timer rule as everywhere else.
-The view follows the last markdown note you visited, so opening your daily note
-puts your day in front of you, and it stays live as sessions are recorded.
+**Tasks.** Each row is its own progress bar, filled to `spent / estimate` in the
+colour of its budget state; finished tasks turn green. The running task is
+outlined, and the total sits on top next to a single start/pause control. Click
+a row to switch the timer to it.
+
+**Reordering.** Hover a row and a grip appears in the margin to its left — the
+row itself does not move. Drag it to reorder: the task line moves in the note
+together with its subtasks, as one undoable edit.
+
+**Timeline.** A hairline above the list runs from the day's first session to
+now. Paused time is a thin line; tracked time is drawn thicker. The line has a
+generous invisible hit area, so it is easy to click despite being thin.
+
+**History.** Clicking the timeline, or the total, unfolds it into a band the
+height of a task row. Pauses stay a thin line through the middle; every stretch
+of work is cut into segments coloured by task, with the tasks listed below as a
+legend.
+
+* Hover a segment to bring it forward and highlight its task; hover a task to
+  highlight all of its segments.
+* Click a stretch of work — the uninterrupted run between two pauses — to narrow
+  the list to the tasks inside it, with their time in that stretch.
+* **Esc** clears the filter, then returns to the task list.
+
+A daily note named `YYYY-MM-DD` shows that day's history; any other note shows
+today's.
 
 ## Colour coding
 

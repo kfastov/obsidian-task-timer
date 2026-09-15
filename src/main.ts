@@ -24,7 +24,7 @@ export default class TaskTimerPlugin extends Plugin {
   /** Last markdown note visited, so the zen view has something to open with. */
   lastMarkdownPath: string | null = null;
 
-  private store!: SessionStore;
+  store!: SessionStore;
   private statusBar!: HTMLElement;
   private ticks = 0;
 

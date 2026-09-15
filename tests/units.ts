@@ -8,6 +8,8 @@ import {
   findLineByTid,
   generateTid,
 } from "../src/task-line";
+import { blockRange, moveBlock, moveInList } from "../src/task-mover";
+import { assignColours, buildTimeline, totalsByTask } from "../src/timeline";
 
 let failures = 0;
 function check(label: string, actual: unknown, expected: unknown): void {
@@ -93,5 +95,70 @@ check("log open", open.match(SESSION_LINE)?.slice(1, 4), ["09:12:04", "...", "a1
 const handEdited = "- 9:12-10:00 [tid:: a1b2c3] edited by hand";
 check("log hand-edited", handEdited.match(SESSION_LINE)?.slice(1, 4), ["9:12", "10:00", "a1b2c3"]);
 check("log heading ignored", "# Time log 2026-08-27".match(SESSION_LINE), null);
+
+// --- reordering ------------------------------------------------------------
+const note = [
+  "## Plan",            // 0
+  "- [ ] A [estimate:: 10m]", // 1
+  "- [ ] B [estimate:: 10m]", // 2
+  "    - [ ] B1 [estimate:: 5m]", // 3
+  "    some note under B",  // 4
+  "- [ ] C [estimate:: 10m]", // 5
+  "",                    // 6
+  "```dataview",         // 7
+  "```",                 // 8
+];
+check("block of a leaf task", blockRange(note, 1), [1, 2]);
+check("block carries children and notes", blockRange(note, 2), [2, 5]);
+check("block stops at a blank line", blockRange(note, 5), [5, 6]);
+
+check("move B with its children below C", moveBlock(note, 2, 5, "after").slice(0, 7), [
+  "## Plan", "- [ ] A [estimate:: 10m]", "- [ ] C [estimate:: 10m]",
+  "- [ ] B [estimate:: 10m]", "    - [ ] B1 [estimate:: 5m]", "    some note under B", "",
+]);
+check("move C above A", moveBlock(note, 5, 1, "before").slice(0, 3), [
+  "## Plan", "- [ ] C [estimate:: 10m]", "- [ ] A [estimate:: 10m]",
+]);
+check("moving into itself is a no-op", moveBlock(note, 2, 3, "after"), note);
+check("dataview block stays put", moveBlock(note, 1, 5, "after").slice(6), ["", "```dataview", "```"]);
+check("child takes its new neighbour's level", moveBlock(note, 3, 1, "before")[1], "- [ ] B1 [estimate:: 5m]");
+
+// Zen list shows A, B, B1, C at lines 1, 2, 3, 5.
+const listed = [1, 2, 3, 5];
+check("list: drag A to the end", moveInList(note, listed, 0, 3).slice(1, 6), [
+  "- [ ] B [estimate:: 10m]", "    - [ ] B1 [estimate:: 5m]", "    some note under B",
+  "- [ ] C [estimate:: 10m]", "- [ ] A [estimate:: 10m]",
+]);
+check("list: drag C to the top", moveInList(note, listed, 3, 0)[1], "- [ ] C [estimate:: 10m]");
+check("list: drop in place is a no-op", moveInList(note, listed, 2, 2), note);
+
+// --- timeline --------------------------------------------------------------
+const t0 = new Date(2026, 8, 15, 9, 0, 0).getTime();
+const min = (m: number) => t0 + m * 60_000;
+const sessions = [
+  { tid: "b", title: "B", start: min(20), end: min(30), dateKey: "2026-09-15" },
+  { tid: "a", title: "A", start: min(0), end: min(10), dateKey: "2026-09-15" },
+  { tid: "c", title: "C", start: min(30) + 2000, end: min(45), dateKey: "2026-09-15" },
+  { tid: "a", title: "A", start: min(60), end: null, dateKey: "2026-09-15" },
+];
+const line = buildTimeline(sessions, min(70), min(75))!;
+check("timeline starts at the first session", line.start, min(0));
+check("timeline stretches to the present", line.end, min(75));
+check("spans are sorted", line.spans.map((s) => s.tid), ["a", "b", "c", "a"]);
+check("running span ends now", line.spans[3].end, min(70));
+check("a quick switch joins one block", line.blocks.map((b) => b.tids), [["a"], ["b", "c"], ["a"]]);
+check("totals per task", [...totalsByTask(line)].map(([tid, s]) => [tid, Math.round(s / 60)]), [["a", 20], ["b", 10], ["c", 15]]);
+check("no sessions, no timeline", buildTimeline([], min(1)), null);
+
+const overlap = buildTimeline([
+  { tid: "a", title: "A", start: min(0), end: min(20), dateKey: "x" },
+  { tid: "b", title: "B", start: min(10), end: min(30), dateKey: "x" },
+], min(40))!;
+check("overlapping sessions are clipped", [overlap.spans[1].start, overlap.spans[1].end], [min(20), min(30)]);
+
+const colours = assignColours(["a", "b", "c", "d", "e", "f", "g", "h", "i"]);
+check("first colour is a built-in accent", colours.get("a"), "var(--color-purple)");
+check("eight distinct accents before repeating", new Set([...colours.values()].slice(0, 8)).size, 8);
+check("ninth colour is a shade, not a repeat", colours.get("i")?.startsWith("color-mix("), true);
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURES`);

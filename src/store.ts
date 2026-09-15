@@ -166,7 +166,8 @@ export class SessionStore {
   /** Looks back over recent logs for a session left running. */
   async findOpenSession(days = 7): Promise<Session | null> {
     for (let back = 0; back < days; back++) {
-      const date = new Date();
+      // One clock source everywhere: Date.now(), not the zero-argument constructor.
+      const date = new Date(Date.now());
       date.setDate(date.getDate() - back);
 
       const open = (await this.read(dateKey(date))).find((s) => s.end === null);

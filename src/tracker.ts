@@ -1,8 +1,7 @@
-import { App, MarkdownView, Notice, TFile } from "obsidian";
-import { Transaction } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
+import { App, Notice, TFile } from "obsidian";
 
 import { formatDuration } from "./duration";
+import { updateTaskLine } from "./edit";
 import { SessionStore } from "./store";
 import {
   findLineByTid,
@@ -35,98 +34,6 @@ type Listener = () => void;
 
 /** How many recently modified notes the tid recovery scan looks through. */
 const RECOVERY_SCAN_LIMIT = 200;
-
-/** The span where two strings differ, so an edit touches as little as possible. */
-function diffRange(
-  before: string,
-  after: string,
-): { from: number; to: number; insert: string } | null {
-  if (before === after) return null;
-
-  let start = 0;
-  while (
-    start < before.length &&
-    start < after.length &&
-    before[start] === after[start]
-  ) {
-    start++;
-  }
-
-  let endBefore = before.length;
-  let endAfter = after.length;
-  while (
-    endBefore > start &&
-    endAfter > start &&
-    before[endBefore - 1] === after[endAfter - 1]
-  ) {
-    endBefore--;
-    endAfter--;
-  }
-
-  return { from: start, to: endBefore, insert: after.slice(start, endAfter) };
-}
-
-/**
- * Rewrites a single task line, preferring the open editor so the cursor and
- * undo history survive, and falling back to a vault write otherwise.
- *
- * Edits go in through CodeMirror as the smallest possible change, kept out of
- * the undo stack: the timer refreshes the line every minute, and those writes
- * are bookkeeping the user should never have to undo their way past.
- */
-async function updateTaskLine(
-  app: App,
-  path: string,
-  tid: string,
-  transform: (line: string) => string,
-): Promise<boolean> {
-  const file = app.vault.getFileByPath(path);
-  if (!file) return false;
-
-  for (const leaf of app.workspace.getLeavesOfType("markdown")) {
-    const view = leaf.view;
-    if (!(view instanceof MarkdownView) || view.file?.path !== path) continue;
-
-    const editor = view.editor;
-    const index = findLineByTid(editor.getValue(), tid);
-    if (index === -1) break;
-
-    const before = editor.getLine(index);
-    const after = transform(before);
-    const diff = diffRange(before, after);
-    if (!diff) return true;
-
-    const cm = (editor as unknown as { cm?: EditorView }).cm;
-    if (cm) {
-      const line = cm.state.doc.line(index + 1);
-      cm.dispatch({
-        changes: {
-          from: line.from + diff.from,
-          to: line.from + diff.to,
-          insert: diff.insert,
-        },
-        annotations: Transaction.addToHistory.of(false),
-      });
-    } else {
-      editor.setLine(index, after);
-    }
-
-    return true;
-  }
-
-  let changed = false;
-  await app.vault.process(file, (content) => {
-    const index = findLineByTid(content, tid);
-    if (index === -1) return content;
-
-    const lines = content.split("\n");
-    lines[index] = transform(lines[index]);
-    changed = true;
-    return lines.join("\n");
-  });
-
-  return changed;
-}
 
 export class Tracker {
   private active: ActiveTimer | null = null;
